@@ -1,0 +1,183 @@
+name: publish-emr-3-ai-hub-images
+
+on:
+  push:
+    branches: [deploy/emr-3-ai-hub]
+    paths:
+      - '.github/workflows/publish-emr-3-ai-hub-images.yml'
+      - 'files/emr-3-ai-hub/build/**'
+      - 'files/emr-3-ai-hub/config/backend-init.sh'
+  workflow_dispatch:
+
+concurrency:
+  group: publish-emr-3-ai-hub-images-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load component pins
+        run: cat files/emr-3-ai-hub/build/pins.env >> "${GITHUB_ENV}"
+
+      - name: Set up Java 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '11'
+          cache: maven
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Build QueryStore OMOD
+        run: |
+          mkdir -p /tmp/src/querystore
+          git -C /tmp/src/querystore init
+          git -C /tmp/src/querystore remote add origin "${QUERYSTORE_REPO}"
+          git -C /tmp/src/querystore fetch --depth 1 origin "${QUERYSTORE_SHA}"
+          git -C /tmp/src/querystore checkout -q FETCH_HEAD
+          (cd /tmp/src/querystore && mvn -q -B -DskipTests clean install)
+
+      - name: Build ChartSearchAI OMOD
+        run: |
+          mkdir -p /tmp/src/chartsearchai
+          git -C /tmp/src/chartsearchai init
+          git -C /tmp/src/chartsearchai remote add origin "${CHARTSEARCHAI_REPO}"
+          git -C /tmp/src/chartsearchai fetch --depth 1 origin "${CHARTSEARCHAI_SHA}"
+          git -C /tmp/src/chartsearchai checkout -q FETCH_HEAD
+          (cd /tmp/src/chartsearchai && mvn -q -B -DskipTests clean package)
+
+      - name: Build ChartSearchAI ESM bundle
+        run: |
+          mkdir -p /tmp/src/chartsearchai-esm
+          git -C /tmp/src/chartsearchai-esm init
+          git -C /tmp/src/chartsearchai-esm remote add origin "${CHARTSEARCHAI_ESM_REPO}"
+          git -C /tmp/src/chartsearchai-esm fetch --depth 1 origin "${CHARTSEARCHAI_ESM_SHA}"
+          git -C /tmp/src/chartsearchai-esm checkout -q FETCH_HEAD
+          (cd /tmp/src/chartsearchai-esm && yarn install --immutable && yarn build)
+
+      - name: Stage backend and frontend build contexts
+        run: |
+          mkdir -p /tmp/backend-ctx /tmp/frontend-ctx /tmp/base-frontend
+          cp files/emr-3-ai-hub/build/Dockerfile.backend /tmp/backend-ctx/Dockerfile
+          cp files/emr-3-ai-hub/config/backend-init.sh /tmp/backend-ctx/backend-init.sh
+          cp /tmp/src/querystore/omod/target/querystore-1.0.0-SNAPSHOT.omod /tmp/backend-ctx/querystore.omod
+          cp /tmp/src/chartsearchai/omod/target/chartsearchai-1.0.0-SNAPSHOT.omod /tmp/backend-ctx/chartsearchai.omod
+          unzip -l /tmp/backend-ctx/querystore.omod | grep -q QueryStoreRestController
+
+          cid="$(docker create "${BASE_FRONTEND_IMAGE}")"
+          trap 'docker rm -f "${cid}" >/dev/null' EXIT
+          docker cp "${cid}:/usr/share/nginx/html/importmap.json" /tmp/base-frontend/importmap.json
+          docker cp "${cid}:/usr/share/nginx/html/routes.registry.json" /tmp/base-frontend/routes.registry.json
+
+          cp files/emr-3-ai-hub/build/Dockerfile.frontend /tmp/frontend-ctx/Dockerfile
+          python3 files/emr-3-ai-hub/build/prepare-frontend-overlay.py \
+            --base-importmap /tmp/base-frontend/importmap.json \
+            --base-registry /tmp/base-frontend/routes.registry.json \
+            --esm-dist /tmp/src/chartsearchai-esm/dist \
+            --esm-sha "${CHARTSEARCHAI_ESM_SHA}" \
+            --out-dir /tmp/frontend-ctx/overlay
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Smoke-test local linux/amd64 images
+        run: |
+          docker buildx build --platform linux/amd64 --load \
+            --build-arg "BASE_BACKEND_IMAGE=${BASE_BACKEND_IMAGE}" \
+            --build-arg "CHARTSEARCHAI_SHA=${CHARTSEARCHAI_SHA}" \
+            --build-arg "QUERYSTORE_SHA=${QUERYSTORE_SHA}" \
+            -t emr-3-ai-hub-backend-smoke:amd64 \
+            /tmp/backend-ctx
+
+          docker run --rm --entrypoint /bin/sh emr-3-ai-hub-backend-smoke:amd64 -c '
+            set -e
+            test "$(id -u)" = "0"
+            test -x /usr/local/bin/backend-init.sh
+            test -s /openmrs/distribution/openmrs_modules/querystore-1.0.0-SNAPSHOT.omod
+            test -s /openmrs/distribution/openmrs_modules/chartsearchai-1.0.0-SNAPSHOT.omod
+          '
+
+          docker buildx build --platform linux/amd64 --load \
+            --build-arg "BASE_FRONTEND_IMAGE=${BASE_FRONTEND_IMAGE}" \
+            --build-arg "CHARTSEARCHAI_ESM_SHA=${CHARTSEARCHAI_ESM_SHA}" \
+            -t emr-3-ai-hub-frontend-smoke:amd64 \
+            /tmp/frontend-ctx
+
+          bundle_dir="openmrs-esm-chartsearchai-app-1.0.0-git${CHARTSEARCHAI_ESM_SHA:0:12}"
+          docker run --rm --entrypoint /bin/sh emr-3-ai-hub-frontend-smoke:amd64 -c "
+            set -e
+            ! test -e /usr/share/nginx/html/importmap.json.br
+            ! test -e /usr/share/nginx/html/routes.registry.json.br
+            test -s \"/usr/share/nginx/html/${bundle_dir}/openmrs-esm-chartsearchai-app.js\"
+            gzip -cd /usr/share/nginx/html/importmap.json.gz | grep -q \"${bundle_dir}/openmrs-esm-chartsearchai-app.js\"
+            gzip -cd /usr/share/nginx/html/routes.registry.json.gz | grep -q '@openmrs/esm-chartsearchai-app'
+            test \"\$(gzip -cd /usr/share/nginx/html/chartsearchai-esm.sha.gz)\" = '${CHARTSEARCHAI_ESM_SHA}'
+          "
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push multi-arch images to GHCR
+        run: |
+          IMAGE_OWNER_REPO="$(printf '%s' "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+          BACKEND_REPO="ghcr.io/${IMAGE_OWNER_REPO}/emr-3-ai-hub-backend"
+          FRONTEND_REPO="ghcr.io/${IMAGE_OWNER_REPO}/emr-3-ai-hub-frontend"
+
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --provenance=false \
+            --push \
+            --build-arg "BASE_BACKEND_IMAGE=${BASE_BACKEND_IMAGE}" \
+            --build-arg "CHARTSEARCHAI_SHA=${CHARTSEARCHAI_SHA}" \
+            --build-arg "QUERYSTORE_SHA=${QUERYSTORE_SHA}" \
+            -t "${BACKEND_REPO}:latest" \
+            -t "${BACKEND_REPO}:chartsearch-${CHARTSEARCHAI_SHA:0:7}" \
+            /tmp/backend-ctx
+
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --provenance=false \
+            --push \
+            --build-arg "BASE_FRONTEND_IMAGE=${BASE_FRONTEND_IMAGE}" \
+            --build-arg "CHARTSEARCHAI_ESM_SHA=${CHARTSEARCHAI_ESM_SHA}" \
+            -t "${FRONTEND_REPO}:latest" \
+            -t "${FRONTEND_REPO}:chartsearch-${CHARTSEARCHAI_ESM_SHA:0:7}" \
+            /tmp/frontend-ctx
+
+          BACKEND_DIGEST="$(docker buildx imagetools inspect "${BACKEND_REPO}:chartsearch-${CHARTSEARCHAI_SHA:0:7}" --format '{{.Manifest.Digest}}')"
+          FRONTEND_DIGEST="$(docker buildx imagetools inspect "${FRONTEND_REPO}:chartsearch-${CHARTSEARCHAI_ESM_SHA:0:7}" --format '{{.Manifest.Digest}}')"
+          case "${BACKEND_DIGEST}" in
+            sha256:????????????????????????????????????????????????????????????????) ;;
+            *) echo "Invalid backend digest: ${BACKEND_DIGEST}" >&2; exit 1 ;;
+          esac
+          case "${FRONTEND_DIGEST}" in
+            sha256:????????????????????????????????????????????????????????????????) ;;
+            *) echo "Invalid frontend digest: ${FRONTEND_DIGEST}" >&2; exit 1 ;;
+          esac
+
+          echo "BACKEND_IMAGE=${BACKEND_REPO}@${BACKEND_DIGEST}"
+          echo "FRONTEND_IMAGE=${FRONTEND_REPO}@${FRONTEND_DIGEST}"
+          {
+            echo "### Published multi-arch emr-3-ai-hub images"
+            echo "- \`${BACKEND_REPO}@${BACKEND_DIGEST}\`"
+            echo "- \`${FRONTEND_REPO}@${FRONTEND_DIGEST}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"

@@ -1,0 +1,11 @@
+ARG BASE_FRONTEND_IMAGE
+FROM ${BASE_FRONTEND_IMAGE}
+ARG CHARTSEARCHAI_ESM_SHA
+LABEL org.opencontainers.image.source="https://github.com/pmanko/openmrs-contrib-ansible-docker-compose" \
+      org.opencontainers.image.description="OpenMRS RefApp 3 frontend (nightly-chartsearch) + ChartSearchAI ESM #93" \
+      org.opencontainers.image.revision="${CHARTSEARCHAI_ESM_SHA}"
+RUN rm -rf /usr/share/nginx/html/openmrs-esm-chartsearchai-app-* \
+           /usr/share/nginx/html/importmap.json* \
+           /usr/share/nginx/html/routes.registry.json* \
+           /usr/share/nginx/html/chartsearchai-esm.sha*
+COPY overlay/ /usr/share/nginx/html/

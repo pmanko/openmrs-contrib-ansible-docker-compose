@@ -1,0 +1,15 @@
+ARG BASE_BACKEND_IMAGE
+FROM ${BASE_BACKEND_IMAGE}
+ARG CHARTSEARCHAI_SHA
+ARG QUERYSTORE_SHA
+LABEL org.opencontainers.image.source="https://github.com/pmanko/openmrs-contrib-ansible-docker-compose" \
+      org.opencontainers.image.description="OpenMRS RefApp 3 backend (nightly-chartsearch) + ChartSearchAI #630 + QueryStore" \
+      org.opencontainers.image.revision="${CHARTSEARCHAI_SHA}" \
+      org.openclinai.querystore.revision="${QUERYSTORE_SHA}"
+USER 0
+RUN rm -f /openmrs/distribution/openmrs_modules/chartsearchai-*.omod \
+          /openmrs/distribution/openmrs_modules/querystore-*.omod
+COPY --chown=1001:1001 --chmod=0644 querystore.omod /openmrs/distribution/openmrs_modules/querystore-1.0.0-SNAPSHOT.omod
+COPY --chown=1001:1001 --chmod=0644 chartsearchai.omod /openmrs/distribution/openmrs_modules/chartsearchai-1.0.0-SNAPSHOT.omod
+COPY --chown=0:0 --chmod=0755 backend-init.sh /usr/local/bin/backend-init.sh
+ENTRYPOINT ["/usr/local/bin/backend-init.sh"]
