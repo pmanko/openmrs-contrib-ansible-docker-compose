@@ -9,7 +9,7 @@ services:
       - "${GATEWAY_PORT:-8889}:80"
 
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-frontend@sha256:a158d3867402cb9cd1fd968ad5cc0e08d1acd2d655ffcedabda9c292b9d78129}
+    image: ${FRONTEND_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-frontend@sha256:fc9844130c4eb1c2bd36b827f4e3be400e8c7be66053c42418b55a07ca39748f}
     restart: always
     environment:
       SPA_PATH: /openmrs/spa
