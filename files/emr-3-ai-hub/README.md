@@ -2,6 +2,21 @@
 
 OpenMRS Reference Application 3 (`nightly-chartsearch`) with **QueryStore on Elasticsearch 8.13.4**, the **prebuilt OpenClinAI HIV dataset baseline** (MariaDB dump + pre-embedded 514k-doc QueryStore snapshot + `all-MiniLM-L6-v2` ONNX embedder), **`med-agent-hub`**, and **`llama-router`** (`llama.cpp` Router Mode).
 
+## Quick Start (Standalone Fork Deployment)
+
+This `deploy/emr-3-ai-hub` branch defaults [`docker-compose.yml`](docker-compose.yml) to public multi-arch (`linux/amd64` and `linux/arm64`) digest-pinned images on GHCR built from [`build/pins.env`](build/pins.env), so deployment requires no local Docker or Maven/Yarn build:
+
+```bash
+git clone -b deploy/emr-3-ai-hub --single-branch https://github.com/pmanko/openmrs-contrib-ansible-docker-compose.git
+cd openmrs-contrib-ansible-docker-compose/files/emr-3-ai-hub
+cp env.template .env
+# Edit .env to choose LLM_BACKEND_MODE and fill in any required credentials
+docker compose pull
+docker compose up -d --no-build
+```
+
+If deploying from upstream PR `#81` instead, copy the `FRONTEND_IMAGE`, `BACKEND_IMAGE`, and `HUB_IMAGE` override snippet from [`env.template`](env.template) into `.env`.
+
 ## Architecture
 
 - **OpenMRS core stack** (`gateway`, `frontend`, `backend`, `db`): Reference Application 3 `nightly-chartsearch` images on host port `8889:80` (configurable via `GATEWAY_PORT`). `frontend` sets `SPA_CONFIG_URLS=/openmrs/spa/config-chartsearchai.json` so the bundled O3 omnibar (`@openmrs/esm-omnibar-app`), ChartSearchAI `/ask` query-results view, `/model` profile switcher command, and patient-chart omnibar command providers (`/visit`, `/order`, `/renew`, `/pending`, `/enroll`) replace the default top-nav patient search icon. `backend` configures QueryStore to use Elasticsearch (`OMRS_EXTRA_QUERYSTORE_BACKEND=elasticsearch`, `OMRS_EXTRA_QUERYSTORE_ELASTICSEARCH_URI=http://elasticsearch:9200`) and sets `OMRS_EXTRA_OPTIMIZED_STARTUP=false` for pre-populated upgrades.

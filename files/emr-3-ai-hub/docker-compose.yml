@@ -1,6 +1,6 @@
 services:
   gateway:
-    image: ${GATEWAY_IMAGE:-openmrs/openmrs-reference-application-3-gateway:${TAG:-nightly-chartsearch}}
+    image: ${GATEWAY_IMAGE:-openmrs/openmrs-reference-application-3-gateway@sha256:7ad9747470894774f22636036248fe22f171803046dad376c525490d4a18740a}
     restart: always
     depends_on:
       - frontend
@@ -9,7 +9,7 @@ services:
       - "${GATEWAY_PORT:-8889}:80"
 
   frontend:
-    image: ${FRONTEND_IMAGE:-openmrs/openmrs-reference-application-3-frontend:${TAG:-nightly-chartsearch}}
+    image: ${FRONTEND_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-frontend@sha256:c089fbfa56c76695d6b187f635efbd48ecd07a9feab44c468a6e0e456942832e}
     restart: always
     environment:
       SPA_PATH: /openmrs/spa
@@ -18,7 +18,7 @@ services:
       SPA_DEFAULT_LOCALE:
 
   backend:
-    image: ${BACKEND_IMAGE:-openmrs/openmrs-reference-application-3-backend:${TAG:-nightly-chartsearch}}
+    image: ${BACKEND_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-backend@sha256:73fd39db0638149c041aeb9661d7a6d21ed9f295ed2031bf4e107c2873081fce}
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -91,7 +91,7 @@ services:
       disable: true
 
   hiv-baseline-stage:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub:${HUB_TAG:-latest}}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:ddcaf8d9b6c0e078de04616f34f78cc795a103c16c70537728ae4a39783a2e3a}
     platform: ${HUB_PLATFORM:-linux/amd64}
     user: "0:0"
     depends_on:
@@ -158,7 +158,7 @@ services:
   # Ensure the shared model volume is writable by med-agent-hub (uid/gid 65532)
   # before llama-router mounts it read-only.
   models-init:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub:${HUB_TAG:-latest}}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:ddcaf8d9b6c0e078de04616f34f78cc795a103c16c70537728ae4a39783a2e3a}
     platform: ${HUB_PLATFORM:-linux/amd64}
     user: "0:0"
     entrypoint: ["chown", "-R", "65532:65532", "/app/models"]
@@ -198,7 +198,7 @@ services:
       start_period: 30s
 
   med-agent-hub:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub:${HUB_TAG:-latest}}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:ddcaf8d9b6c0e078de04616f34f78cc795a103c16c70537728ae4a39783a2e3a}
     platform: ${HUB_PLATFORM:-linux/amd64}
     restart: always
     extra_hosts:
@@ -237,7 +237,7 @@ services:
       start_period: 600s
 
   hub-config-init:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub:${HUB_TAG:-latest}}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:ddcaf8d9b6c0e078de04616f34f78cc795a103c16c70537728ae4a39783a2e3a}
     platform: ${HUB_PLATFORM:-linux/amd64}
     depends_on:
       backend:
