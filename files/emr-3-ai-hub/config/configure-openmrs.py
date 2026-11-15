@@ -73,7 +73,7 @@ DEFAULT_HUB_PRESETS: list[dict[str, Any]] = [
     {
         "id": "gemma-4-12b",
         "label": "Gemma 4 12B",
-        "description": "Single-pass clinical answer with Gemma 4 12B and deterministic safety checks.",
+        "description": "Single-pass clinical answer with Gemma 4 12B and chart-grounded temporal checks.",
         "default": True,
         "selection_priority": 10,
         "model": "gemma-4-12b",
@@ -83,14 +83,14 @@ DEFAULT_HUB_PRESETS: list[dict[str, Any]] = [
             "checks": {
                 "temporal": "enforce",
                 "confidence": "findings",
-                "drug_safety": True,
+                "drug_safety": False,
             },
         },
     },
     {
         "id": "gemma-4-26b",
         "label": "Gemma 4 26B",
-        "description": "Single-pass clinical answer with Gemma 4 26B and deterministic safety checks.",
+        "description": "Single-pass clinical answer with Gemma 4 26B and chart-grounded temporal checks.",
         "default": False,
         "selection_priority": 20,
         "model": "gemma-26b",
@@ -100,14 +100,14 @@ DEFAULT_HUB_PRESETS: list[dict[str, Any]] = [
             "checks": {
                 "temporal": "enforce",
                 "confidence": "findings",
-                "drug_safety": True,
+                "drug_safety": False,
             },
         },
     },
     {
         "id": "gemma-4-e4b",
         "label": "Gemma 4 E4B (Fast)",
-        "description": "Fast single-pass clinical answer with Gemma 4 E4B and deterministic safety checks.",
+        "description": "Fast single-pass clinical answer with Gemma 4 E4B and chart-grounded temporal checks.",
         "default": False,
         "selection_priority": 30,
         "model": "gemma-e4b",
@@ -117,14 +117,14 @@ DEFAULT_HUB_PRESETS: list[dict[str, Any]] = [
             "checks": {
                 "temporal": "enforce",
                 "confidence": "findings",
-                "drug_safety": True,
+                "drug_safety": False,
             },
         },
     },
     {
         "id": "qwen-3.5-9b",
         "label": "Qwen 3.5 9B",
-        "description": "Single-pass clinical answer with Qwen 3.5 9B and deterministic safety checks.",
+        "description": "Single-pass clinical answer with Qwen 3.5 9B and chart-grounded temporal checks.",
         "default": False,
         "selection_priority": 40,
         "model": "qwen3.5-9b",
@@ -134,7 +134,7 @@ DEFAULT_HUB_PRESETS: list[dict[str, Any]] = [
             "checks": {
                 "temporal": "enforce",
                 "confidence": "findings",
-                "drug_safety": True,
+                "drug_safety": False,
             },
         },
     },
