@@ -30,7 +30,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '11'
-          cache: maven
 
       - name: Set up Node 22
         uses: actions/setup-node@v4
@@ -74,7 +73,7 @@ jobs:
           cp files/emr-3-ai-hub/config/backend-init.sh /tmp/backend-ctx/backend-init.sh
           cp /tmp/src/querystore/omod/target/querystore-1.0.0-SNAPSHOT.omod /tmp/backend-ctx/querystore.omod
           cp /tmp/src/chartsearchai/omod/target/chartsearchai-1.0.0-SNAPSHOT.omod /tmp/backend-ctx/chartsearchai.omod
-          unzip -l /tmp/backend-ctx/querystore.omod | grep -q QueryStoreRestController
+          python3 -c 'import sys, zipfile; sys.exit(0 if any("QueryStoreRestController" in n for n in zipfile.ZipFile(sys.argv[1]).namelist()) else 1)' /tmp/backend-ctx/querystore.omod
 
           cid="$(docker create "${BASE_FRONTEND_IMAGE}")"
           trap 'docker rm -f "${cid}" >/dev/null' EXIT
