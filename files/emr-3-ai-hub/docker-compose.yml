@@ -9,7 +9,7 @@ services:
       - "${GATEWAY_PORT:-8889}:80"
 
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-frontend@sha256:c089fbfa56c76695d6b187f635efbd48ecd07a9feab44c468a6e0e456942832e}
+    image: ${FRONTEND_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-frontend@sha256:a158d3867402cb9cd1fd968ad5cc0e08d1acd2d655ffcedabda9c292b9d78129}
     restart: always
     environment:
       SPA_PATH: /openmrs/spa
@@ -91,7 +91,7 @@ services:
       disable: true
 
   hiv-baseline-stage:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:ddcaf8d9b6c0e078de04616f34f78cc795a103c16c70537728ae4a39783a2e3a}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:a27ce6b58390750dd963aeaa0a0f424c35035a8d6aff5fb820dd5b99e63f51c0}
     platform: ${HUB_PLATFORM:-linux/amd64}
     user: "0:0"
     depends_on:
@@ -158,7 +158,7 @@ services:
   # Ensure the shared model volume is writable by med-agent-hub (uid/gid 65532)
   # before llama-router mounts it read-only.
   models-init:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:ddcaf8d9b6c0e078de04616f34f78cc795a103c16c70537728ae4a39783a2e3a}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:a27ce6b58390750dd963aeaa0a0f424c35035a8d6aff5fb820dd5b99e63f51c0}
     platform: ${HUB_PLATFORM:-linux/amd64}
     user: "0:0"
     entrypoint: ["chown", "-R", "65532:65532", "/app/models"]
@@ -198,7 +198,7 @@ services:
       start_period: 30s
 
   med-agent-hub:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:ddcaf8d9b6c0e078de04616f34f78cc795a103c16c70537728ae4a39783a2e3a}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:a27ce6b58390750dd963aeaa0a0f424c35035a8d6aff5fb820dd5b99e63f51c0}
     platform: ${HUB_PLATFORM:-linux/amd64}
     restart: always
     extra_hosts:
@@ -237,7 +237,7 @@ services:
       start_period: 600s
 
   hub-config-init:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:ddcaf8d9b6c0e078de04616f34f78cc795a103c16c70537728ae4a39783a2e3a}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:a27ce6b58390750dd963aeaa0a0f424c35035a8d6aff5fb820dd5b99e63f51c0}
     platform: ${HUB_PLATFORM:-linux/amd64}
     depends_on:
       backend:
