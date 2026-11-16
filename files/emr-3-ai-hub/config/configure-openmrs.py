@@ -83,7 +83,7 @@ DEFAULT_HUB_PRESETS: list[dict[str, Any]] = [
             "checks": {
                 "temporal": "enforce",
                 "confidence": "findings",
-                "drug_safety": False,
+                "drug_safety": True,
             },
         },
     },
@@ -100,7 +100,7 @@ DEFAULT_HUB_PRESETS: list[dict[str, Any]] = [
             "checks": {
                 "temporal": "enforce",
                 "confidence": "findings",
-                "drug_safety": False,
+                "drug_safety": True,
             },
         },
     },
@@ -117,7 +117,7 @@ DEFAULT_HUB_PRESETS: list[dict[str, Any]] = [
             "checks": {
                 "temporal": "enforce",
                 "confidence": "findings",
-                "drug_safety": False,
+                "drug_safety": True,
             },
         },
     },
@@ -134,7 +134,7 @@ DEFAULT_HUB_PRESETS: list[dict[str, Any]] = [
             "checks": {
                 "temporal": "enforce",
                 "confidence": "findings",
-                "drug_safety": False,
+                "drug_safety": True,
             },
         },
     },

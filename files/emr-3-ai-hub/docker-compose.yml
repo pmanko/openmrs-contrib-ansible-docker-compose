@@ -91,7 +91,7 @@ services:
       disable: true
 
   hiv-baseline-stage:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:a27ce6b58390750dd963aeaa0a0f424c35035a8d6aff5fb820dd5b99e63f51c0}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:0dbf29d5c11145730dc050ce5c67053568b3df474dd628b7b68a51339cdf9465}
     platform: ${HUB_PLATFORM:-linux/amd64}
     user: "0:0"
     depends_on:
@@ -158,7 +158,7 @@ services:
   # Ensure the shared model volume is writable by med-agent-hub (uid/gid 65532)
   # before llama-router mounts it read-only.
   models-init:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:a27ce6b58390750dd963aeaa0a0f424c35035a8d6aff5fb820dd5b99e63f51c0}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:0dbf29d5c11145730dc050ce5c67053568b3df474dd628b7b68a51339cdf9465}
     platform: ${HUB_PLATFORM:-linux/amd64}
     user: "0:0"
     entrypoint: ["chown", "-R", "65532:65532", "/app/models"]
@@ -197,18 +197,31 @@ services:
       retries: 10
       start_period: 30s
 
+  ddi-service:
+    image: ${DDI_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-ddi-service:latest}
+    restart: always
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health', timeout=3).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
   med-agent-hub:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:a27ce6b58390750dd963aeaa0a0f424c35035a8d6aff5fb820dd5b99e63f51c0}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:0dbf29d5c11145730dc050ce5c67053568b3df474dd628b7b68a51339cdf9465}
     platform: ${HUB_PLATFORM:-linux/amd64}
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
+      ddi-service:
+        condition: service_healthy
       models-init:
         condition: service_completed_successfully
       llama-router:
         condition: service_healthy
     environment:
+      DDI_SERVICE_URL: ${DDI_SERVICE_URL:-http://ddi-service:8090}
       HUB_API_KEY: ${CHARTSEARCH_HUB_API_KEY:-}
       LLM_PROVIDER: ${MED_AGENT_LLM_PROVIDER:-openai-compatible}
       LLM_BASE_URL: ${MED_AGENT_LLM_BASE_URL:-http://llama-router:8077}
@@ -237,7 +250,7 @@ services:
       start_period: 600s
 
   hub-config-init:
-    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:a27ce6b58390750dd963aeaa0a0f424c35035a8d6aff5fb820dd5b99e63f51c0}
+    image: ${HUB_IMAGE:-ghcr.io/pmanko/med-agent-hub@sha256:0dbf29d5c11145730dc050ce5c67053568b3df474dd628b7b68a51339cdf9465}
     platform: ${HUB_PLATFORM:-linux/amd64}
     depends_on:
       backend:
