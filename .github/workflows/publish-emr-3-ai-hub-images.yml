@@ -6,7 +6,6 @@ on:
     paths:
       - '.github/workflows/publish-emr-3-ai-hub-images.yml'
       - 'files/emr-3-ai-hub/build/**'
-      - 'files/emr-3-ai-hub/ddi-service/**'
       - 'files/emr-3-ai-hub/config/backend-init.sh'
   workflow_dispatch:
 
@@ -69,10 +68,7 @@ jobs:
 
       - name: Stage backend and frontend build contexts
         run: |
-          mkdir -p /tmp/backend-ctx /tmp/frontend-ctx /tmp/base-frontend /tmp/ddi-ctx
-          cp files/emr-3-ai-hub/build/Dockerfile.ddi /tmp/ddi-ctx/Dockerfile
-          cp files/emr-3-ai-hub/ddi-service/requirements.txt files/emr-3-ai-hub/ddi-service/app.py /tmp/ddi-ctx/
-          cp -R files/emr-3-ai-hub/ddi-service/data /tmp/ddi-ctx/data
+          mkdir -p /tmp/backend-ctx /tmp/frontend-ctx /tmp/base-frontend
           cp files/emr-3-ai-hub/build/Dockerfile.backend /tmp/backend-ctx/Dockerfile
           cp files/emr-3-ai-hub/config/backend-init.sh /tmp/backend-ctx/backend-init.sh
           cp /tmp/src/querystore/omod/target/querystore-1.0.0-SNAPSHOT.omod /tmp/backend-ctx/querystore.omod
@@ -132,12 +128,6 @@ jobs:
             test \"\$(gzip -cd /usr/share/nginx/html/chartsearchai-esm.sha.gz)\" = '${CHARTSEARCHAI_ESM_SHA}'
           "
 
-          docker buildx build --platform linux/amd64 --load \
-            -t emr-3-ai-hub-ddi-smoke:amd64 \
-            /tmp/ddi-ctx
-
-          docker run --rm --entrypoint python emr-3-ai-hub-ddi-smoke:amd64 -c "import app; h = app.health(); assert h['status'] == 'ok' and h['drugs'] >= 2000 and h['interactions'] >= 290000, h"
-
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -150,7 +140,6 @@ jobs:
           IMAGE_OWNER_REPO="$(printf '%s' "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
           BACKEND_REPO="ghcr.io/${IMAGE_OWNER_REPO}/emr-3-ai-hub-backend"
           FRONTEND_REPO="ghcr.io/${IMAGE_OWNER_REPO}/emr-3-ai-hub-frontend"
-          DDI_REPO="ghcr.io/${IMAGE_OWNER_REPO}/emr-3-ai-hub-ddi-service"
 
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
@@ -173,17 +162,8 @@ jobs:
             -t "${FRONTEND_REPO}:chartsearch-${CHARTSEARCHAI_ESM_SHA:0:7}" \
             /tmp/frontend-ctx
 
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --provenance=false \
-            --push \
-            -t "${DDI_REPO}:latest" \
-            -t "${DDI_REPO}:ddi-${GITHUB_SHA:0:7}" \
-            /tmp/ddi-ctx
-
           BACKEND_DIGEST="$(docker buildx imagetools inspect "${BACKEND_REPO}:chartsearch-${CHARTSEARCHAI_SHA:0:7}" --format '{{.Manifest.Digest}}')"
           FRONTEND_DIGEST="$(docker buildx imagetools inspect "${FRONTEND_REPO}:chartsearch-${CHARTSEARCHAI_ESM_SHA:0:7}" --format '{{.Manifest.Digest}}')"
-          DDI_DIGEST="$(docker buildx imagetools inspect "${DDI_REPO}:ddi-${GITHUB_SHA:0:7}" --format '{{.Manifest.Digest}}')"
           case "${BACKEND_DIGEST}" in
             sha256:????????????????????????????????????????????????????????????????) ;;
             *) echo "Invalid backend digest: ${BACKEND_DIGEST}" >&2; exit 1 ;;
@@ -192,17 +172,11 @@ jobs:
             sha256:????????????????????????????????????????????????????????????????) ;;
             *) echo "Invalid frontend digest: ${FRONTEND_DIGEST}" >&2; exit 1 ;;
           esac
-          case "${DDI_DIGEST}" in
-            sha256:????????????????????????????????????????????????????????????????) ;;
-            *) echo "Invalid ddi-service digest: ${DDI_DIGEST}" >&2; exit 1 ;;
-          esac
 
           echo "BACKEND_IMAGE=${BACKEND_REPO}@${BACKEND_DIGEST}"
           echo "FRONTEND_IMAGE=${FRONTEND_REPO}@${FRONTEND_DIGEST}"
-          echo "DDI_IMAGE=${DDI_REPO}@${DDI_DIGEST}"
           {
             echo "### Published multi-arch emr-3-ai-hub images"
             echo "- \`${BACKEND_REPO}@${BACKEND_DIGEST}\`"
             echo "- \`${FRONTEND_REPO}@${FRONTEND_DIGEST}\`"
-            echo "- \`${DDI_REPO}@${DDI_DIGEST}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
