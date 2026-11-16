@@ -136,11 +136,7 @@ jobs:
             -t emr-3-ai-hub-ddi-smoke:amd64 \
             /tmp/ddi-ctx
 
-          docker run --rm --entrypoint python emr-3-ai-hub-ddi-smoke:amd64 -c "
-            import app
-            h = app.health()
-            assert h['status'] == 'ok' and h['drugs'] >= 2000 and h['interactions'] >= 290000, h
-          "
+          docker run --rm --entrypoint python emr-3-ai-hub-ddi-smoke:amd64 -c "import app; h = app.health(); assert h['status'] == 'ok' and h['drugs'] >= 2000 and h['interactions'] >= 290000, h"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
