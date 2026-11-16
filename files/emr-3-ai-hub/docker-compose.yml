@@ -9,7 +9,7 @@ services:
       - "${GATEWAY_PORT:-8889}:80"
 
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-frontend@sha256:fc9844130c4eb1c2bd36b827f4e3be400e8c7be66053c42418b55a07ca39748f}
+    image: ${FRONTEND_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-frontend@sha256:a2c024faeb8ef2190ad4dc170f613cdf37c21576d9d33327376d6ef00391d819}
     restart: always
     environment:
       SPA_PATH: /openmrs/spa
@@ -18,7 +18,7 @@ services:
       SPA_DEFAULT_LOCALE:
 
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-backend@sha256:73fd39db0638149c041aeb9661d7a6d21ed9f295ed2031bf4e107c2873081fce}
+    image: ${BACKEND_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-backend@sha256:1e778e2ecab15d7d7e7eaf571808a15701860894eea3d15261d9635aeb7629db}
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -198,7 +198,7 @@ services:
       start_period: 30s
 
   ddi-service:
-    image: ${DDI_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-ddi-service:latest}
+    image: ${DDI_IMAGE:-ghcr.io/pmanko/openmrs-contrib-ansible-docker-compose/emr-3-ai-hub-ddi-service@sha256:91673c237efac38c1373e7f80dca5c9e9ffb89fa81ed5495541aefc9b76d83cc}
     restart: always
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health', timeout=3).read()"]
